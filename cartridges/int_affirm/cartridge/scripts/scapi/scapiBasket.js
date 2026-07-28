@@ -94,7 +94,6 @@ exports.createBasket = function (token, basket, customAttributes, temporary) {
         };
     }
 
-    // productLineItems is a flat list — includes parent, child, option, bonus, and bundled PLIs
     basket.productLineItems.toArray().forEach(function (productLineItem) {
         // Skip child/non-standard PLIs:
         // - option: already included as option_items on the parent PLI
@@ -160,6 +159,84 @@ exports.createBasket = function (token, basket, customAttributes, temporary) {
     }
 
     return callService(token, "POST", url, body);
+};
+
+/**
+ * An array of coupon codes applied to a cart or order
+ * @param {dw.order.LineItemCtnr} basket - the current line item container
+ * @returns {Array} an array of coupon codes applied to the basket
+ */
+function getDiscountCodes(basket) {
+    var couponCodes = [];
+    var couponIterator = basket.getCouponLineItems().iterator();
+    while (couponIterator.hasNext()) {
+        couponCodes.push(couponIterator.next().getCouponCode());
+    }
+
+    return couponCodes;
+}
+
+/**
+ * Sets shopper context in SCAPI using basket data.
+ *
+ * @param {string} sid - SLAS USID
+ * @param {dw.order.Basket} basket - SFCC basket
+ * @param {string} token - Bearer token
+ * @returns {Object} API response
+ */
+exports.setShopperContext = function (sid, basket, token) {
+
+    if (!sid || !basket || !token) {
+        Logger.error("Missing required parameters for shopper context");
+        return null;
+    }
+
+    var userAgent = request.httpUserAgent || "";
+    var deviceType = userAgent.toLowerCase().indexOf("mobile") > -1 ? "mobile" : "desktop";
+
+    var ipAddress = request.httpRemoteAddress || "";
+
+    var customer = basket.getCustomer();
+    var customerGroupIds = [];
+
+   
+    var groups = customer.getCustomerGroups().iterator();
+    while (groups.hasNext()) {
+        customerGroupIds.push(groups.next().getID());
+    }
+   
+    var body = {
+        effectiveDateTime: '',
+
+        sourceCode: basket.custom && basket.custom.sourceCode,
+
+        customQualifiers: {
+            deviceType: deviceType,
+            ipAddress: ipAddress,
+            operatingSystem: userAgent
+        },
+
+        assignmentQualifiers: {
+            store: ''
+        },
+
+        customerGroupIds: customerGroupIds,
+
+        clientIp: ipAddress,
+
+        couponCodes: getDiscountCodes(basket)
+    };
+
+   var shortCode = affirmData.getSCAPIShortCode();
+    var orgId = affirmData.getSCAPIOrgId();
+
+    var url =
+        "https://" + shortCode +
+        ".api.commercecloud.salesforce.com/shopper/shopper-context/v1/organizations/" +
+        orgId + "/shopper-context/" + sid +
+        "?siteId=" + encodeURIComponent(affirmData.getSCAPISiteId());
+
+        return callService(token, "PUT", url, body);
 };
 
 /**

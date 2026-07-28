@@ -21,7 +21,7 @@ var removePaymentInstruments = function (basket, paymentInstruments) {
 /**
  *  Handle Ajax payment (and billing) form submit
  */
-server.replace(
+server.prepend(
     'SubmitPayment',
     server.middleware.https,
     csrfProtection.validateAjaxRequest,
@@ -32,6 +32,10 @@ server.replace(
 
         var viewData = {};
         var paymentForm = server.forms.getForm('billing');
+
+        if (!paymentForm || !paymentForm.paymentMethod || paymentForm.paymentMethod.htmlValue !='Affirm') {
+            return next();
+        }
 
         // verify billing form data
         var billingFormErrors = COHelpers.validateBillingForm(paymentForm.addressFields);
@@ -65,13 +69,6 @@ server.replace(
         var paymentMethodIdValue = paymentForm.paymentMethod.value;
         // Affirm code section - start
         var currentBasket = BasketMgr.getCurrentBasket();
-        Transaction.wrap(function () {
-	        if (paymentMethodIdValue == affirmHelper.AFFIRM_PAYMENT_METHOD) {
-	        	removePaymentInstruments(currentBasket, currentBasket.getPaymentInstruments(PaymentInstrument.METHOD_CREDIT_CARD));
-	        } else if (paymentMethodIdValue == PaymentInstrument.METHOD_CREDIT_CARD) {
-	        	removePaymentInstruments(currentBasket, currentBasket.getPaymentInstruments(affirmHelper.AFFIRM_PAYMENT_METHOD));
-	        }
-        });
         viewData.currencyCode =  { value: currentBasket.currencyCode };
         viewData.email =  { value: currentBasket.customerEmail };
         // Affirm code section - end
@@ -241,7 +238,12 @@ server.replace(
                     null
                 ));
             }
-
+            if(currentBasket.custom && 'adyenGiftCardsOrderNo' in currentBasket.custom && currentBasket.custom.adyenGiftCardsOrderNo) {
+                Transaction.wrap(function() {
+                    delete currentBasket.custom.adyenGiftCards;
+                    delete currentBasket.custom.adyenGiftCardsOrderNo;
+                });
+            }
             var processor = PaymentMgr.getPaymentMethod(paymentMethodID).getPaymentProcessor();
 
             if (HookMgr.hasHook('app.payment.processor.' + processor.ID.toLowerCase())) {
@@ -334,6 +336,8 @@ server.replace(
     }
 );
 
+// Commenting as this is not needed for CheckoutServices-PlaceOrder route
+/**
 server.prepend('PlaceOrder', server.middleware.https, function (req, res, next) {
     var currentBasket = BasketMgr.getCurrentBasket();
     if (currentBasket) {
@@ -349,5 +353,6 @@ server.prepend('PlaceOrder', server.middleware.https, function (req, res, next) 
     }
     return next();
 });
+*/
 
 module.exports = server.exports();
