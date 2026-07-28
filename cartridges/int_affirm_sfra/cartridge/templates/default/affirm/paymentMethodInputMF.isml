@@ -33,10 +33,12 @@
 	   </fieldset>
 		 <isset name="affirm" value="${require('*/cartridge/scripts/affirm')}" scope="page" />
 		 <isset name="affirmTotal" value="${pdict.order.totals.grandTotal}" scope="session" />
-         <div id="affirm-config"
-         data-vcnenabled='<isprint value="${affirm.data.getAffirmVCNStatus() == 'on'}" encoding="on" />'
-         data-affirmenabled='<isprint value="${affirm.data.getAffirmOnlineStatus()}" encoding="on" />'
-         data-affirupdateurl='<isprint value="${URLUtils.url('Affirm-CheckoutObject')}" encoding="on" />'
-         data-mode='<isprint value="${dw.system.Site.getCurrent().getCustomPreferenceValue('AffirmModalEnable').value}" encoding="on" />'
-         ></div>
+		 <isif condition="${affirm}">
+			<div id="affirm-config"
+			data-vcnenabled='<isprint value="${affirm.data.getAffirmVCNStatus() == 'on'}" encoding="on" />'
+			data-affirmenabled='<isprint value="${affirm.data.getAffirmOnlineStatus()}" encoding="on" />'
+			data-affirupdateurl='<isprint value="${URLUtils.url('Affirm-CheckoutObject')}" encoding="on" />'
+			data-mode='<isprint value="${dw.system.Site.getCurrent().getCustomPreferenceValue('AffirmModalEnable').value}" encoding="on" />'
+			></div>
+		 </isif>
 </div>

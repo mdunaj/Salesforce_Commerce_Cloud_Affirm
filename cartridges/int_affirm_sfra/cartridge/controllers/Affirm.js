@@ -25,7 +25,6 @@ var currentSite = require('dw/system/Site').getCurrent();
 var Logger = require('dw/system/Logger').getLogger('Affirm', 'affirmController');
 var slasAuth = require('*/cartridge/scripts/scapi/slasAuth');
 var scapiBasket = require('*/cartridge/scripts/scapi/scapiBasket');
-var affirmTracker = require('*/cartridge/scripts/utils/affirmTracker');
 var basketCalculationHelpers = require('*/cartridge/scripts/helpers/basketCalculationHelpers');
 var COHelpers = require('*/cartridge/scripts/checkout/checkoutHelpers');
 var ProductMgr = require('dw/catalog/ProductMgr');
@@ -130,7 +129,7 @@ server.use('UpdateShipping', function (req, res, next) {
     var requestDataOrder = requestObject.data.order;
     var selectedShippingMethodId = requestDataOrder.chosen_shipping_option.merchant_internal_method_code;
 
-    var basket = BasketMgr.getCurrentOrNewBasket();
+    var basket = BasketMgr.getCurrentBasket();
     var affirmShippingAddress = JSON.parse(basket.custom.AffirmShippingAddress);
     var applicableShippingMethods = ShippingMgr.getShipmentShippingModel(basket.getDefaultShipment())
         .getApplicableShippingMethods(affirmShippingAddress);
@@ -182,7 +181,7 @@ server.use('Confirmation', function (req, res, next) {
     var checkoutToken = request.httpParameterMap.checkout_token.stringValue;
 
     try {
-        var basket = BasketMgr.getCurrentOrNewBasket();
+        var basket = BasketMgr.getCurrentBasket();
         var finalizeResult = affirmOrderFinalize.finalizeAffirmOrder({
             basket: basket,
             checkoutToken: checkoutToken,
@@ -238,7 +237,7 @@ server.get('ExpressCheckout', function (req, res, next) {
     }
 
     // get the basket
-    var basket = BasketMgr.getCurrentOrNewBasket();
+    var basket = BasketMgr.getCurrentBasket();
     var pid = req.querystring.pid;
     var quantity = req.querystring.quantity ? parseInt(req.querystring.quantity, 10) : 1;
 
@@ -337,7 +336,6 @@ server.get('ExpressCheckout', function (req, res, next) {
         return next();
     } catch (e) {
         Logger.error('Affirm Express Checkout error: {0}', e);
-        affirmTracker.trackErrorWithStack('express_checkout', e);
         res.json({ error: true, message: 'Failed to initialize Express Checkout' });
         return next();
     }
@@ -413,7 +411,6 @@ server.post('ShippingTotals', function (req, res, next) {
 
     // Validate currency
     if (currency && currency !== 'USD') {
-        affirmTracker.trackErrorWithoutStack('express_shipping_totals', 'Currency mismatch: ' + currency, affirmTracker.INTERNAL_SERVER_ERROR);
         res.setStatusCode(422);
         res.json({
             errors: [{
@@ -436,7 +433,6 @@ server.post('ShippingTotals', function (req, res, next) {
 
     // Default validation: US addresses only
     if (shippingAddress && shippingAddress.country && shippingAddress.country !== 'US') {
-        affirmTracker.trackErrorWithoutStack('express_shipping_totals', 'Unsupported shipping zone: ' + shippingAddress.country, affirmTracker.INTERNAL_SERVER_ERROR);
         res.setStatusCode(422);
         res.json({
             errors: [{
@@ -461,8 +457,8 @@ server.post('ShippingTotals', function (req, res, next) {
 
         // Map Affirm address format to SCAPI format (handle nulls from Affirm)
         var scapiAddress = {
-            firstName: shippingAddress.first_name || shippingAddress.name && shippingAddress.name.first || '',
-            lastName: shippingAddress.last_name || shippingAddress.name && shippingAddress.name.last || '',
+            firstName: shippingAddress.first_name || shippingAddress.name && shippingAddress.name.first || 'ABC',
+            lastName: shippingAddress.last_name || shippingAddress.name && shippingAddress.name.last || 'ABC',
             address1: shippingAddress.line1 || '',
             address2: shippingAddress.line2 || '',
             city: shippingAddress.city || '',
@@ -486,7 +482,6 @@ server.post('ShippingTotals', function (req, res, next) {
         }
     } catch (scapiErr) {
         Logger.error('Affirm Express: SCAPI shipping calculation failed - {0}', scapiErr.message);
-        affirmTracker.trackErrorWithStack('express_shipping_totals', scapiErr);
         res.setStatusCode(422);
         res.json({
             errors: [{
@@ -496,14 +491,12 @@ server.post('ShippingTotals', function (req, res, next) {
         });
         return next();
     }
-
     if (!shippingOptions || shippingOptions.length === 0) {
-        affirmTracker.trackErrorWithoutStack('express_shipping_totals', 'No shipping options available for address', affirmTracker.INTERNAL_SERVER_ERROR);
         res.setStatusCode(422);
         res.json({
             errors: [{
                 error_code: 'SHIPPING_METHOD_UNAVAILABLE',
-                message: 'No shipping options are available for this address.'
+                message: 'There was an error in your shipping information. Please ensure there are no special characters in the address provided ( dots "." , commas "," , semicolons ";" , dashes "-" are not permitted in shipping address )'
             }]
         });
         return next();
@@ -779,7 +772,7 @@ server.use('ApplyDiscount', function (req, res, next) {
         return next();
     }
     var affirmDataOrder = JSON.parse(request.httpParameterMap.requestBodyAsString).data.order;
-    var basket = BasketMgr.getCurrentOrNewBasket();
+    var basket = BasketMgr.getCurrentBasket();
 
     try {
         Transaction.wrap(function () {

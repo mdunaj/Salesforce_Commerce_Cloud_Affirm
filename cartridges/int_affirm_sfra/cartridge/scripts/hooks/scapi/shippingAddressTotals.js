@@ -8,6 +8,149 @@ var Logger = require("dw/system/Logger").getLogger(
 );
 
 /**
+* Plain JS object that represents a DW Script API dw.order.ShippingMethod object
+* @param {dw.order.Shipment} shipment - the target Shipment
+* @param {Object} [address] - optional address object
+* @returns {dw.util.Collection} an array of ShippingModels
+*/
+function getApplicableShippingMethods(shipment, address) {
+    var Site = require('dw/system/Site');
+    var collections = require('*/cartridge/scripts/util/collections');
+
+    if (!shipment) {
+        return [];
+    }
+
+    var shippingRestrictionsHelper = require('*/cartridge/scripts/helpers/shippingRestrictionsHelper');
+    var countrySpecificConfig = require('*/cartridge/scripts/helpers/countrySpecificConfigHelper');
+
+    var inventoryFailureOrHazmatCheck = false;
+
+    if (Site.current.getCustomPreferenceValue('enableCountrySelector') && !empty(shipment.shippingAddress)) {
+        inventoryFailureOrHazmatCheck = countrySpecificConfig.checkProductInventory(shipment);
+        inventoryFailureOrHazmatCheck = inventoryFailureOrHazmatCheck || countrySpecificConfig.checkProductHazmat(shipment);
+        inventoryFailureOrHazmatCheck = inventoryFailureOrHazmatCheck || countrySpecificConfig.checkDropShipProduct(shipment);
+    }
+
+    var materialBasedShippingRestrictionMsg = '';
+
+    if (address) {
+        materialBasedShippingRestrictionMsg = shippingRestrictionsHelper.getShippingRestrictionMaterialMsg(
+            shipment,
+            address.stateCode
+        );
+    } else if (shipment.shippingAddress) {
+        materialBasedShippingRestrictionMsg = shippingRestrictionsHelper.getShippingRestrictionMaterialMsg(
+            shipment,
+            shipment.shippingAddress.stateCode
+        );
+    }
+
+    var filteredMethods = [];
+    var isCustomized = false;
+
+    collections.forEach(shipment.productLineItems, function (productLineItem) {
+        if (
+            !empty(productLineItem.custom.productCustomizationTransactionID) ||
+            !empty(productLineItem.custom.productCustomizationAssemblyID)
+        ) {
+            isCustomized = true;
+        }
+    });
+
+    var shipmentShippingModel = ShippingMgr.getShipmentShippingModel(shipment);
+    var enableToRestrictStoreInventory = false;
+
+    if (shipment.shippingAddress && shipment.shippingAddress.address1) {
+        var ProductInventoryMgr = require('dw/catalog/ProductInventoryMgr');
+        var dcInventoryListId = Site.getCurrent().getCustomPreferenceValue('dcInventoryListId');
+        var productInventory = ProductInventoryMgr.getInventoryList(dcInventoryListId);
+
+        var restrictStoreInventoryShipping = collections.find(
+            shipmentShippingModel.applicableShippingMethods,
+            function (applicableShippingMethod) {
+                return applicableShippingMethod.custom &&
+                    applicableShippingMethod.custom.enableToRestrictStoreInventory;
+            }
+        );
+
+        var restrictStoreInventoryForDropShip = Site.getCurrent().getCustomPreferenceValue('restrictStoreInventoryForDropShip');
+
+        collections.forEach(shipment.productLineItems, function (productLineItem) {
+            var productExistInInventory = productInventory ?
+                productInventory.getRecord(productLineItem.productID) :
+                null;
+
+            if (
+                (
+                    restrictStoreInventoryShipping ||
+                    (
+                        restrictStoreInventoryForDropShip &&
+                        productLineItem.product &&
+                        productLineItem.product.custom.eligibleForDropShip
+                    )
+                ) &&
+                !(productLineItem.custom && productLineItem.custom.fromStoreId) &&
+                (
+                    empty(productExistInInventory) ||
+                    (
+                        !empty(productExistInInventory) &&
+                        !productExistInInventory.perpetual &&
+                        productExistInInventory.ATS.value < 1
+                    )
+                )
+            ) {
+                enableToRestrictStoreInventory = true;
+            }
+        });
+    }
+
+    if (
+        materialBasedShippingRestrictionMsg === '' &&
+        !inventoryFailureOrHazmatCheck &&
+        !enableToRestrictStoreInventory
+    ) {
+        var shippingMethods;
+        var shippingAddress;
+
+        if (address) {
+            shippingMethods = shipmentShippingModel.getApplicableShippingMethods(address);
+        } else if (shipment.getShippingAddress() && shipment.getShippingAddress().getPostalCode()) {
+            shippingAddress = getAddressFromShipment(shipment.getShippingAddress());
+            shippingMethods = shipmentShippingModel.getApplicableShippingMethods(shippingAddress);
+        } else {
+            shippingMethods = shipmentShippingModel.getApplicableShippingMethods({});
+        }
+
+        collections.forEach(shippingMethods, function (shippingMethod) {
+            if (
+                isCustomized &&
+                (
+                    shippingMethod.custom.disableShippingForMonogrammedItems ||
+                    shippingMethod.custom.disableShippingForCustomizableItems ||
+                    shippingMethod.custom.disableShippingForMTOItems
+                )
+            ) {
+                return;
+            }
+
+            if (!shippingMethod.custom.storePickupEnabled) {
+                filteredMethods.push(shippingMethod);
+            }
+        });
+
+        filteredMethods.sort(function (a, b) {
+            var amountA = shipmentShippingModel.getShippingCost(a).amount.value;
+            var amountB = shipmentShippingModel.getShippingCost(b).amount.value;
+
+            return amountA - amountB;
+        });
+    }
+
+    return filteredMethods;
+}
+
+/**
  * SCAPI hook: dw.ocapi.shop.basket.shipment.shipping_address.afterPUT
  *
  * Runs inside a transactional context so that external tax providers
@@ -31,16 +174,16 @@ exports.afterPUT = function (basket, shipment, shippingAddress) {
 
         // shippingAddress is an OrderAddressWO — use plain property access
         var addressObj = {
+            address1 : shippingAddress.address1 || "",
+            address2 : shippingAddress.address2 || "",
             countryCode: shippingAddress.countryCode || "US",
             stateCode: shippingAddress.stateCode || "",
             postalCode: shippingAddress.postalCode || "",
             city: shippingAddress.city || "",
         };
 
-        var applicableShippingMethods =
-            ShippingMgr.getShipmentShippingModel(
-                shipment
-            ).getApplicableShippingMethods(addressObj);
+        var applicableShippingMethods = getApplicableShippingMethods (shipment, addressObj);
+            
         var currentShippingMethod =
             shipment.getShippingMethod() ||
             ShippingMgr.getDefaultShippingMethod();
@@ -71,6 +214,11 @@ exports.afterPUT = function (basket, shipment, shippingAddress) {
                     tax_amount: taxAmount,
                     total: totalAmount,
                 });
+            } catch (e) {
+                Logger.error(
+                    "shippingAddressTotals afterPUT error: {0}",
+                    e.message
+                );
             } finally {
                 shipment.setShippingMethod(currentShippingMethod);
                 HookMgr.callHook("dw.order.calculate", "calculate", basket);

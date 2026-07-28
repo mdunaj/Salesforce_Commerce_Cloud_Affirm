@@ -299,6 +299,184 @@ exports.createExpressBasket = function (token, usid, basket, customAttributes, t
     return scapiResponse;
 };
 
+// ============================================================================
+// MERCHANT CUSTOMIZATION (disabled) — merchant's independent SCAPI
+// basket/shopper-context implementation, based on express-checkout-beta-scapi-260615.
+//
+// This duplicates functionality that express-checkout-beta-scapi-260715 also
+// added independently (createBasket -> createExpressBasket rename + built-in
+// coupon replay; a shopper-context call). Left here commented out, rather than
+// deleted, so the merchant's version stays visible. It must NOT be reactivated
+// as-is: exports.setShopperContext below has a different signature
+// (sid, basket, token) than the active exports.setShopperContext above
+// (token, usid, basket) — a second live assignment to the same export name
+// would silently override the active one and break every call site.
+// ============================================================================
+//
+// /**
+//  * Creates a new SCAPI basket with product items from the given basket.
+//  *
+//  * @param {string} token - Bearer access token
+//  * @param {dw.order.Basket} basket - SFCC basket to copy product items from
+//  * @param {Object} customAttributes - SCAPI basket custom attributes to set during creation
+//  * @param {boolean} temporary - Whether to create the SCAPI basket as temporary
+//  * @returns {Object} basket data including basket_id and shipments
+//  */
+// exports.createBasket = function (token, basket, customAttributes, temporary) {
+//     var url = getBaseUrl() + siteParam() + (temporary ? "&temporary=true" : "");
+//     var productItems = [];
+//
+//     if (!basket || !basket.productLineItems) {
+//         return {
+//             product_items: productItems,
+//         };
+//     }
+//
+//     basket.productLineItems.toArray().forEach(function (productLineItem) {
+//         // Skip child/non-standard PLIs:
+//         // - option: already included as option_items on the parent PLI
+//         // - bonus: free promotional products that SCAPI would price at full price
+//         // - bundled: children of a product bundle; the parent bundle PLI carries the price
+//         if (
+//             productLineItem.optionProductLineItem ||
+//             productLineItem.bonusProductLineItem ||
+//             productLineItem.bundledProductLineItem
+//         ) {
+//             return;
+//         }
+//
+//         var productId = productLineItem.productID;
+//         var quantity = productLineItem.quantityValue || 1;
+//
+//         if (!productId) {
+//             return;
+//         }
+//
+//         var scapiProductItem = {
+//             product_id: productId,
+//             quantity: quantity,
+//         };
+//
+//         if (
+//             productLineItem.optionProductLineItems &&
+//             productLineItem.optionProductLineItems.length > 0
+//         ) {
+//             var optionItems = [];
+//
+//             productLineItem.optionProductLineItems
+//                 .toArray()
+//                 .forEach(function (optionLineItem) {
+//                     var optionValueId = optionLineItem.productID;
+//
+//                     if (!optionValueId || optionValueId === "none") {
+//                         return;
+//                     }
+//
+//                     optionItems.push({
+//                         option_id: optionLineItem.optionID,
+//                         option_value_id: optionValueId,
+//                     });
+//                 });
+//
+//             if (optionItems.length > 0) {
+//                 scapiProductItem.option_items = optionItems;
+//             }
+//         }
+//
+//         productItems.push(scapiProductItem);
+//     });
+//
+//     var body = {
+//         product_items: productItems,
+//     };
+//
+//     if (customAttributes) {
+//         Object.keys(customAttributes).forEach(function (key) {
+//             body[key] = customAttributes[key];
+//         });
+//     }
+//
+//     return callService(token, "POST", url, body);
+// };
+//
+// /**
+//  * An array of coupon codes applied to a cart or order
+//  * @param {dw.order.LineItemCtnr} basket - the current line item container
+//  * @returns {Array} an array of coupon codes applied to the basket
+//  */
+// function getDiscountCodes(basket) {
+//     var couponCodes = [];
+//     var couponIterator = basket.getCouponLineItems().iterator();
+//     while (couponIterator.hasNext()) {
+//         couponCodes.push(couponIterator.next().getCouponCode());
+//     }
+//
+//     return couponCodes;
+// }
+//
+// /**
+//  * Sets shopper context in SCAPI using basket data.
+//  *
+//  * @param {string} sid - SLAS USID
+//  * @param {dw.order.Basket} basket - SFCC basket
+//  * @param {string} token - Bearer token
+//  * @returns {Object} API response
+//  */
+// exports.setShopperContext = function (sid, basket, token) {
+//
+//     if (!sid || !basket || !token) {
+//         Logger.error("Missing required parameters for shopper context");
+//         return null;
+//     }
+//
+//     var userAgent = request.httpUserAgent || "";
+//     var deviceType = userAgent.toLowerCase().indexOf("mobile") > -1 ? "mobile" : "desktop";
+//
+//     var ipAddress = request.httpRemoteAddress || "";
+//
+//     var customer = basket.getCustomer();
+//     var customerGroupIds = [];
+//
+//
+//     var groups = customer.getCustomerGroups().iterator();
+//     while (groups.hasNext()) {
+//         customerGroupIds.push(groups.next().getID());
+//     }
+//
+//     var body = {
+//         effectiveDateTime: '',
+//
+//         sourceCode: basket.custom && basket.custom.sourceCode,
+//
+//         customQualifiers: {
+//             deviceType: deviceType,
+//             ipAddress: ipAddress,
+//             operatingSystem: userAgent
+//         },
+//
+//         assignmentQualifiers: {
+//             store: ''
+//         },
+//
+//         customerGroupIds: customerGroupIds,
+//
+//         clientIp: ipAddress,
+//
+//         couponCodes: getDiscountCodes(basket)
+//     };
+//
+//    var shortCode = affirmData.getSCAPIShortCode();
+//     var orgId = affirmData.getSCAPIOrgId();
+//
+//     var url =
+//         "https://" + shortCode +
+//         ".api.commercecloud.salesforce.com/shopper/shopper-context/v1/organizations/" +
+//         orgId + "/shopper-context/" + sid +
+//         "?siteId=" + encodeURIComponent(affirmData.getSCAPISiteId());
+//
+//         return callService(token, "PUT", url, body);
+// };
+
 /**
  * Applies a coupon to the SCAPI basket.
  *
