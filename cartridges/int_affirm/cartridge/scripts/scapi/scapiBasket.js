@@ -120,24 +120,25 @@ exports.setShopperContext = function (token, usid, basket) {
 
     // Source code — copied so source-code-qualified promotions and price books
     // apply. SFCC keeps the active source code on the shopper session.
-    // NOTE: verify the exact accessor for your SFCC version; wrapped defensively.
-    var sourceCode = null;
-    try {
-        if (session && session.sourceCodeInfo) {
-            sourceCode = session.sourceCodeInfo.code;
-        }
-    } catch (e) {
-        sourceCode = null;
-    }
+    var sourceCode = basket.custom && basket.custom.sourceCode;
 
     var body = {
         customerGroupIds: customerGroupIds,
         // IP / geo qualifiers — let location-qualified promotions fire.
         clientIp: request.httpRemoteAddress || "",
         customQualifiers: {
+            deviceType: userAgent.toLowerCase().indexOf("mobile") > -1 ? "mobile" : "desktop",
             ipAddress: request.httpRemoteAddress || "",
             operatingSystem: request.httpUserAgent || "",
         },
+
+        effectiveDateTime: '',
+        assignmentQualifiers: {
+            store: ''
+        },
+        // TBD - merchant code populated these here vs via applyCoupon,
+        // but also their setShopperContext was never called
+        // couponCodes: getDiscountCodes(basket)
     };
 
     if (sourceCode) {

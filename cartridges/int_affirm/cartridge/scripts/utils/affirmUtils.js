@@ -540,7 +540,8 @@
 		
         self.calculateProductSetPrice = function(productSet){
             var psProductsIterator = productSet.productSetProducts.iterator();
-            var basket = BasketMgr.getCurrentOrNewBasket();
+            // TBD - getCurrentOrNewBasket() existed before express changes
+            var basket = BasketMgr.getCurrentBasket();
             var psPrice = new Money(0, basket.currencyCode);
 			
             while(psProductsIterator.hasNext()){
@@ -742,7 +743,8 @@
                 }
 				
             } else {
-                var basket = BasketMgr.getCurrentOrNewBasket();
+                // TBD - getCurrentOrNewBasket() existed before express changes
+                var basket = BasketMgr.getCurrentBasket();
                 var productLineItems = basket.getAllProductLineItems().iterator();
                 while (productLineItems.hasNext()) {
 	                var pli = productLineItems.next();
@@ -765,7 +767,8 @@
         };
 		
         self.updateShipmentShippingMethod = function(shipmentID, shippingMethodID, shippingMethod, shippingMethods) {
-            var basket = BasketMgr.getCurrentOrNewBasket();
+            // TBD - getCurrentOrNewBasket() existed before express changes
+            var basket = BasketMgr.getCurrentBasket();
             var shipment = basket.getShipment(shipmentID);
 
 	        if (!shippingMethods) {
@@ -806,7 +809,8 @@
         };
 		
         self.preCalculateShipping = function(shippingMethod) {
-            var basket = BasketMgr.getCurrentOrNewBasket();
+            // TBD - getCurrentOrNewBasket() existed before express changes
+            var basket = BasketMgr.getCurrentBasket();
 	        var shipment = basket.getDefaultShipment();
 	
 	        if (shipment) {
@@ -895,7 +899,8 @@
 	    };
 		
         self.getShippingOptions = function(addressObj) {
-            var basket = BasketMgr.getCurrentOrNewBasket();
+            // TBD - getCurrentOrNewBasket() existed before express changes
+            var basket = BasketMgr.getCurrentBasket();
 		    if (!addressObj) {
 		        addressObj = JSON.parse(basket.custom.AffirmShippingAddress);
 		    }
