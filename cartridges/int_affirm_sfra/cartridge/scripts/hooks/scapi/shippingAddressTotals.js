@@ -7,6 +7,9 @@ var Logger = require("dw/system/Logger").getLogger(
     "shippingAddressTotals"
 );
 
+// Logic added by merchant needs to be hooks
+// Represents additonal filtering of shipping methods
+// Unclear if the dual support of address and shipment.shippingAddress is generic
 /**
 * Plain JS object that represents a DW Script API dw.order.ShippingMethod object
 * @param {dw.order.Shipment} shipment - the target Shipment
@@ -174,6 +177,7 @@ exports.afterPUT = function (basket, shipment, shippingAddress) {
 
         // shippingAddress is an OrderAddressWO — use plain property access
         var addressObj = {
+            // KEEP, we send them, should be used
             address1 : shippingAddress.address1 || "",
             address2 : shippingAddress.address2 || "",
             countryCode: shippingAddress.countryCode || "US",
@@ -182,6 +186,7 @@ exports.afterPUT = function (basket, shipment, shippingAddress) {
             city: shippingAddress.city || "",
         };
 
+        // See comment on method above
         var applicableShippingMethods = getApplicableShippingMethods (shipment, addressObj);
             
         var currentShippingMethod =
@@ -215,6 +220,7 @@ exports.afterPUT = function (basket, shipment, shippingAddress) {
                     total: totalAmount,
                 });
             } catch (e) {
+                // Better exeption logging, KEEP
                 Logger.error(
                     "shippingAddressTotals afterPUT error: {0}",
                     e.message
@@ -224,6 +230,9 @@ exports.afterPUT = function (basket, shipment, shippingAddress) {
                 HookMgr.callHook("dw.order.calculate", "calculate", basket);
             }
         }
+        // Moves subtotal fetch closer to where it's needed
+        // Unclear if this is to avoid issues with basket edits
+        // KEEP
         var subtotalCents = Math.round(
             basket.getAdjustedMerchandizeTotalPrice(true).getValue() * 100
         );

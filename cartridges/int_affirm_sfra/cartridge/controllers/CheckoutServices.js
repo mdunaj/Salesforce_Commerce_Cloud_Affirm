@@ -21,6 +21,7 @@ var removePaymentInstruments = function (basket, paymentInstruments) {
 /**
  *  Handle Ajax payment (and billing) form submit
  */
+// UNRELATED TO EXPRESS
 server.prepend(
     'SubmitPayment',
     server.middleware.https,
@@ -33,6 +34,7 @@ server.prepend(
         var viewData = {};
         var paymentForm = server.forms.getForm('billing');
 
+        // UNRELATED TO EXPRESS
         if (!paymentForm || !paymentForm.paymentMethod || paymentForm.paymentMethod.htmlValue !='Affirm') {
             return next();
         }
@@ -69,6 +71,7 @@ server.prepend(
         var paymentMethodIdValue = paymentForm.paymentMethod.value;
         // Affirm code section - start
         var currentBasket = BasketMgr.getCurrentBasket();
+        // UNRELATED TO EXPRESS
         viewData.currencyCode =  { value: currentBasket.currencyCode };
         viewData.email =  { value: currentBasket.customerEmail };
         // Affirm code section - end
@@ -238,6 +241,7 @@ server.prepend(
                     null
                 ));
             }
+            // UNRELATED TO EXPRESS
             if(currentBasket.custom && 'adyenGiftCardsOrderNo' in currentBasket.custom && currentBasket.custom.adyenGiftCardsOrderNo) {
                 Transaction.wrap(function() {
                     delete currentBasket.custom.adyenGiftCards;
@@ -336,6 +340,7 @@ server.prepend(
     }
 );
 
+// UNRELATED TO EXPRESS
 // Commenting as this is not needed for CheckoutServices-PlaceOrder route
 /**
 server.prepend('PlaceOrder', server.middleware.https, function (req, res, next) {

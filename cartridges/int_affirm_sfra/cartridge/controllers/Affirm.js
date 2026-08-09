@@ -25,6 +25,7 @@ var currentSite = require('dw/system/Site').getCurrent();
 var Logger = require('dw/system/Logger').getLogger('Affirm', 'affirmController');
 var slasAuth = require('*/cartridge/scripts/scapi/slasAuth');
 var scapiBasket = require('*/cartridge/scripts/scapi/scapiBasket');
+// Merchant specific, tracker should be included
 var basketCalculationHelpers = require('*/cartridge/scripts/helpers/basketCalculationHelpers');
 var COHelpers = require('*/cartridge/scripts/checkout/checkoutHelpers');
 
@@ -126,6 +127,7 @@ server.use('UpdateShipping', function (req, res, next) {
     var requestDataOrder = requestObject.data.order;
     var selectedShippingMethodId = requestDataOrder.chosen_shipping_option.merchant_internal_method_code;
 
+    // TBD - getCurrentOrNewBasket() existed before express changes
     var basket = BasketMgr.getCurrentBasket();
     var affirmShippingAddress = JSON.parse(basket.custom.AffirmShippingAddress);
     var applicableShippingMethods = ShippingMgr.getShipmentShippingModel(basket.getDefaultShipment())
@@ -178,6 +180,7 @@ server.use('Confirmation', function (req, res, next) {
     var checkoutToken = request.httpParameterMap.checkout_token.stringValue;
 
     try {
+        // TBD - getCurrentOrNewBasket() existed before express changes
         var basket = BasketMgr.getCurrentBasket();
         var finalizeResult = affirmOrderFinalize.finalizeAffirmOrder({
             basket: basket,
@@ -322,6 +325,7 @@ server.get('ExpressCheckout', function (req, res, next) {
         return next();
     } catch (e) {
         Logger.error('Affirm Express Checkout error: {0}', e);
+        // Ignore, keep tracker
         res.json({ error: true, message: 'Failed to initialize Express Checkout' });
         return next();
     }
@@ -397,6 +401,7 @@ server.post('ShippingTotals', function (req, res, next) {
 
     // Validate currency
     if (currency && currency !== 'USD') {
+        // Ignore, keep tracker
         res.setStatusCode(422);
         res.json({
             errors: [{
@@ -419,6 +424,7 @@ server.post('ShippingTotals', function (req, res, next) {
 
     // Default validation: US addresses only
     if (shippingAddress && shippingAddress.country && shippingAddress.country !== 'US') {
+        // Ignore, keep tracker
         res.setStatusCode(422);
         res.json({
             errors: [{
@@ -443,6 +449,7 @@ server.post('ShippingTotals', function (req, res, next) {
 
         // Map Affirm address format to SCAPI format (handle nulls from Affirm)
         var scapiAddress = {
+            // TBD - Should we hadd a hook to allow defaulting of first / last names
             firstName: shippingAddress.first_name || shippingAddress.name && shippingAddress.name.first || 'ABC',
             lastName: shippingAddress.last_name || shippingAddress.name && shippingAddress.name.last || 'ABC',
             address1: shippingAddress.line1 || '',
@@ -468,6 +475,7 @@ server.post('ShippingTotals', function (req, res, next) {
         }
     } catch (scapiErr) {
         Logger.error('Affirm Express: SCAPI shipping calculation failed - {0}', scapiErr.message);
+        // Ignore, keep tracker
         res.setStatusCode(422);
         res.json({
             errors: [{
@@ -478,10 +486,12 @@ server.post('ShippingTotals', function (req, res, next) {
         return next();
     }
     if (!shippingOptions || shippingOptions.length === 0) {
+        // Ignore, keep tracker
         res.setStatusCode(422);
         res.json({
             errors: [{
                 error_code: 'SHIPPING_METHOD_UNAVAILABLE',
+                // TBD - Add hook for custome error messages based on error code
                 message: 'There was an error in your shipping information. Please ensure there are no special characters in the address provided ( dots "." , commas "," , semicolons ";" , dashes "-" are not permitted in shipping address )'
             }]
         });
@@ -770,6 +780,7 @@ server.use('ApplyDiscount', function (req, res, next) {
         return next();
     }
     var affirmDataOrder = JSON.parse(request.httpParameterMap.requestBodyAsString).data.order;
+    // TBD - getCurrentOrNewBasket() existed before express changes
     var basket = BasketMgr.getCurrentBasket();
 
     try {

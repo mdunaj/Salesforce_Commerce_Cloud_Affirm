@@ -94,6 +94,7 @@ exports.createBasket = function (token, basket, customAttributes, temporary) {
         };
     }
 
+    // ignore, this comment is accurate, not sure why they deleted it
     basket.productLineItems.toArray().forEach(function (productLineItem) {
         // Skip child/non-standard PLIs:
         // - option: already included as option_items on the parent PLI
@@ -161,6 +162,8 @@ exports.createBasket = function (token, basket, customAttributes, temporary) {
     return callService(token, "POST", url, body);
 };
 
+// Ignore, a functionally equivalent version exists in the updated code
+// See comment below of about how they are actually applied
 /**
  * An array of coupon codes applied to a cart or order
  * @param {dw.order.LineItemCtnr} basket - the current line item container
@@ -176,6 +179,7 @@ function getDiscountCodes(basket) {
     return couponCodes;
 }
 
+// This method is not actually used in this version of the code BUT it is in the updated version
 /**
  * Sets shopper context in SCAPI using basket data.
  *
@@ -206,16 +210,20 @@ exports.setShopperContext = function (sid, basket, token) {
     }
    
     var body = {
+        // TBD - effectiveDateTime missing from updated version
         effectiveDateTime: '',
 
+        // TBD - sourceCode derived differently in updated version
         sourceCode: basket.custom && basket.custom.sourceCode,
 
         customQualifiers: {
+            // TBD - deviceType missing from updated version
             deviceType: deviceType,
             ipAddress: ipAddress,
             operatingSystem: userAgent
         },
 
+        // TBD - assignmentQualifiers missing from updated version
         assignmentQualifiers: {
             store: ''
         },
@@ -224,6 +232,8 @@ exports.setShopperContext = function (sid, basket, token) {
 
         clientIp: ipAddress,
 
+        // TBD - Updated code uses applyCoupon (SCAPI call) for each code after
+        // basket creation instead of providing on context
         couponCodes: getDiscountCodes(basket)
     };
 

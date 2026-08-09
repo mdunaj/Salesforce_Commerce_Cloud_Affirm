@@ -123,6 +123,8 @@
 
                             <!-- Cart and [Optionally] Apple Pay -->
                             <isinclude template="product/components/addToCartProduct" />
+                        <!-- Removal of Express button from PDP -->
+                        <!-- Merchant specific, IGNORE -->
                         </div>
                             <isinclude template="util/affirmModule"/>
                             <isaffirmpromo 

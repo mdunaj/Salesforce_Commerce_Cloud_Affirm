@@ -33,6 +33,8 @@
 	   </fieldset>
 		 <isset name="affirm" value="${require('*/cartridge/scripts/affirm')}" scope="page" />
 		 <isset name="affirmTotal" value="${pdict.order.totals.grandTotal}" scope="session" />
+		<!-- Moved affirm-config div as-is into conditional -->
+		<!-- Unrelated to Express, IGNORE -->
 		 <isif condition="${affirm}">
 			<div id="affirm-config"
 			data-vcnenabled='<isprint value="${affirm.data.getAffirmVCNStatus() == 'on'}" encoding="on" />'
