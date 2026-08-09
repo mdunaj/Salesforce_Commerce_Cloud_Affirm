@@ -130,7 +130,8 @@ server.use('UpdateShipping', function (req, res, next) {
     var requestDataOrder = requestObject.data.order;
     var selectedShippingMethodId = requestDataOrder.chosen_shipping_option.merchant_internal_method_code;
 
-    var basket = BasketMgr.getCurrentOrNewBasket();
+    // TBD - getCurrentOrNewBasket() existed before express changes
+    var basket = BasketMgr.getCurrentBasket();
     var affirmShippingAddress = JSON.parse(basket.custom.AffirmShippingAddress);
     var applicableShippingMethods = ShippingMgr.getShipmentShippingModel(basket.getDefaultShipment())
         .getApplicableShippingMethods(affirmShippingAddress);
@@ -182,7 +183,8 @@ server.use('Confirmation', function (req, res, next) {
     var checkoutToken = request.httpParameterMap.checkout_token.stringValue;
 
     try {
-        var basket = BasketMgr.getCurrentOrNewBasket();
+        // TBD - getCurrentOrNewBasket() existed before express changes
+        var basket = BasketMgr.getCurrentBasket();
         var finalizeResult = affirmOrderFinalize.finalizeAffirmOrder({
             basket: basket,
             checkoutToken: checkoutToken,
@@ -238,7 +240,8 @@ server.get('ExpressCheckout', function (req, res, next) {
     }
 
     // get the basket
-    var basket = BasketMgr.getCurrentOrNewBasket();
+    // TBD - getCurrentOrNewBasket() existed before express changes
+    var basket = BasketMgr.getCurrentBasket();
     var pid = req.querystring.pid;
     var quantity = req.querystring.quantity ? parseInt(req.querystring.quantity, 10) : 1;
 
@@ -461,8 +464,9 @@ server.post('ShippingTotals', function (req, res, next) {
 
         // Map Affirm address format to SCAPI format (handle nulls from Affirm)
         var scapiAddress = {
-            firstName: shippingAddress.first_name || shippingAddress.name && shippingAddress.name.first || '',
-            lastName: shippingAddress.last_name || shippingAddress.name && shippingAddress.name.last || '',
+            // TBD - Should we hadd a hook to allow defaulting of first / last names
+            firstName: shippingAddress.first_name || shippingAddress.name && shippingAddress.name.first || 'ABC',
+            lastName: shippingAddress.last_name || shippingAddress.name && shippingAddress.name.last || 'ABC',
             address1: shippingAddress.line1 || '',
             address2: shippingAddress.line2 || '',
             city: shippingAddress.city || '',
@@ -503,7 +507,8 @@ server.post('ShippingTotals', function (req, res, next) {
         res.json({
             errors: [{
                 error_code: 'SHIPPING_METHOD_UNAVAILABLE',
-                message: 'No shipping options are available for this address.'
+                // TBD - Add hook for custome error messages based on error code
+                message: 'There was an error in your shipping information. Please ensure there are no special characters in the address provided ( dots "." , commas "," , semicolons ";" , dashes "-" are not permitted in shipping address )'
             }]
         });
         return next();
@@ -779,7 +784,8 @@ server.use('ApplyDiscount', function (req, res, next) {
         return next();
     }
     var affirmDataOrder = JSON.parse(request.httpParameterMap.requestBodyAsString).data.order;
-    var basket = BasketMgr.getCurrentOrNewBasket();
+    // TBD - getCurrentOrNewBasket() existed before express changes
+    var basket = BasketMgr.getCurrentBasket();
 
     try {
         Transaction.wrap(function () {
