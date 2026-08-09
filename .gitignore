@@ -3,3 +3,4 @@ dw.json
 .vscode/
 /cartridges/int_affirm_sfra/cartridge/static/default/js/
 /cartridges/int_affirm_sfra/cartridge/static/default/css/
+.python-version
