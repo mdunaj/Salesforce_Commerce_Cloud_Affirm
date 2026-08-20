@@ -196,6 +196,8 @@ exports.setShopperContext = function (sid, basket, token) {
     }
 
     var userAgent = request.httpUserAgent || "";
+    // potentially needs to be request.httpUserAgent.toLowerCase().indexOf("mobile") > -1 
+    // as I don't think userAgent is a global object in SFCC
     var deviceType = userAgent.toLowerCase().indexOf("mobile") > -1 ? "mobile" : "desktop";
 
     var ipAddress = request.httpRemoteAddress || "";
@@ -210,20 +212,19 @@ exports.setShopperContext = function (sid, basket, token) {
     }
    
     var body = {
-        // TBD - effectiveDateTime missing from updated version
+        // Ignore, don't "half wire in" with empty string
         effectiveDateTime: '',
 
-        // TBD - sourceCode derived differently in updated version
+        // Keep this version of deriving source code
         sourceCode: basket.custom && basket.custom.sourceCode,
 
         customQualifiers: {
-            // TBD - deviceType missing from updated version
             deviceType: deviceType,
             ipAddress: ipAddress,
             operatingSystem: userAgent
         },
 
-        // TBD - assignmentQualifiers missing from updated version
+        // Ignore, don't "half wire in" with empty string
         assignmentQualifiers: {
             store: ''
         },
@@ -234,6 +235,9 @@ exports.setShopperContext = function (sid, basket, token) {
 
         // TBD - Updated code uses applyCoupon (SCAPI call) for each code after
         // basket creation instead of providing on context
+        // Daniel - This one doesn't really make sense to me. I assume there maybe some missing merchant
+        // code? Anyways I suggested adding another custom hook here to allow merchants to 
+        // extend the setShopperContext payload incase they needed to add more properties
         couponCodes: getDiscountCodes(basket)
     };
 

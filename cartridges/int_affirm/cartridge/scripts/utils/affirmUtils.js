@@ -540,7 +540,7 @@
 		
         self.calculateProductSetPrice = function(productSet){
             var psProductsIterator = productSet.productSetProducts.iterator();
-            // TBD - getCurrentOrNewBasket() existed before express changes
+            // Ignore - getCurrentOrNewBasket() existed before express changes
             var basket = BasketMgr.getCurrentBasket();
             var psPrice = new Money(0, basket.currencyCode);
 			
@@ -743,7 +743,7 @@
                 }
 				
             } else {
-                // TBD - getCurrentOrNewBasket() existed before express changes
+                // Ignore - getCurrentOrNewBasket() existed before express changes
                 var basket = BasketMgr.getCurrentBasket();
                 var productLineItems = basket.getAllProductLineItems().iterator();
                 while (productLineItems.hasNext()) {
@@ -767,7 +767,7 @@
         };
 		
         self.updateShipmentShippingMethod = function(shipmentID, shippingMethodID, shippingMethod, shippingMethods) {
-            // TBD - getCurrentOrNewBasket() existed before express changes
+            // Ignore - getCurrentOrNewBasket() existed before express changes
             var basket = BasketMgr.getCurrentBasket();
             var shipment = basket.getShipment(shipmentID);
 
@@ -809,7 +809,7 @@
         };
 		
         self.preCalculateShipping = function(shippingMethod) {
-            // TBD - getCurrentOrNewBasket() existed before express changes
+            // Ignore - getCurrentOrNewBasket() existed before express changes
             var basket = BasketMgr.getCurrentBasket();
 	        var shipment = basket.getDefaultShipment();
 	
@@ -900,7 +900,7 @@
 		
         self.getShippingOptions = function(addressObj) {
             var basket = BasketMgr.getCurrentBasket();
-            // TBD - getCurrentOrNewBasket() existed before express changes
+            // Ignore - getCurrentOrNewBasket() existed before express changes
 		    if (!addressObj) {
 		        addressObj = JSON.parse(basket.custom.AffirmShippingAddress);
 		    }
