@@ -122,6 +122,8 @@ exports.setShopperContext = function (token, usid, basket) {
     // apply. SFCC keeps the active source code on the shopper session.
     var sourceCode = basket.custom && basket.custom.sourceCode;
 
+    var userAgent = request.httpUserAgent || "";
+
     var body = {
         customerGroupIds: customerGroupIds,
         // IP / geo qualifiers — let location-qualified promotions fire.
@@ -129,22 +131,15 @@ exports.setShopperContext = function (token, usid, basket) {
         customQualifiers: {
             deviceType: userAgent.toLowerCase().indexOf("mobile") > -1 ? "mobile" : "desktop",
             ipAddress: request.httpRemoteAddress || "",
-            operatingSystem: request.httpUserAgent || "",
+            operatingSystem: userAgent,
         },
-
-        effectiveDateTime: '',
-        assignmentQualifiers: {
-            store: ''
-        },
-        // TBD - merchant code populated these here vs via applyCoupon,
-        // but also their setShopperContext was never called
-        // couponCodes: getDiscountCodes(basket)
     };
 
     if (sourceCode) {
         body.sourceCode = sourceCode;
     }
 
+    // TODO - Add hook for additions to body before call (effectiveDateTime, assignmentQualifiers.store, couponCodes)
     return callService(token, "PUT", url, body);
 };
 

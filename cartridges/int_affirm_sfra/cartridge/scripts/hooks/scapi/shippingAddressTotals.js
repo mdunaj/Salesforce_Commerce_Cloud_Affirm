@@ -185,7 +185,14 @@ exports.afterPUT = function (basket, shipment, shippingAddress) {
             city: shippingAddress.city || "",
         };
 
-        var applicableShippingMethods = getApplicableShippingMethods (shipment, addressObj);
+        // var applicableShippingMethods =
+        //     ShippingMgr.getShipmentShippingModel(
+        //         shipment
+        //     ).getApplicableShippingMethods(addressObj);
+        // TODO - Switch back to ShippingMgr, add hook for additional filtering before the calculate calls below 
+        // There is an existing app.affirm.express.filterShippingMethods call in the ShippingTotals controller endpoint
+        // Confirm why that one is not useful first
+        var applicableShippingMethods = getApplicableShippingMethods(shipment, addressObj);
         var currentShippingMethod =
             shipment.getShippingMethod() ||
             ShippingMgr.getDefaultShippingMethod();
